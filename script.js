@@ -6,18 +6,21 @@ const MODES = {
 };
 
 // Global State
-let currentMode = 'pomodoro';
-let initialDuration = MODES[currentMode];
-let remainingSeconds = initialDuration;
-// let timerInterval = null;
-let isRunning = false;
-
-// Switching to using timestamps for timer
-let startTime = null;
-let duration = initialDuration;
+let currentMode = 'pomodoro'; // sets Pomodoro as default mode
+let initialDuration = MODES[currentMode]; // sets initial duration
+let remainingSeconds = initialDuration; // remaining seconds will be initial duration at start
+let isRunning = false; // no timer running, so function is false
+let startTime = null; // no timer started, so start time not yet captured
+let duration = initialDuration; 
 let timerInterval = null;
 let pausedTime = 0;
 let currentModeSeconds = initialDuration;
+
+// UI toggle helper
+const modeButtonsEl = document.getElementById('mode-buttons'); // Mode buttons element
+const controlButtonsEl = document.getElementById('control-buttons'); // Control buttons element
+const playPauseBtn = document.getElementById('play-pause'); // Play/pause button, which will have multiple uses
+const displayEl = document.getElementById('timer-display'); // Timer display element
 
 // Format mm:ss display for consistency
 function formatTime(seconds) {
@@ -26,14 +29,7 @@ function formatTime(seconds) {
 	return `${m}:${s}`;
 }
 
-
-// Centralize remaining time display
-const displayEl = document.getElementById('timer-display');
-
-// function updateDisplay() {
-// 	displayEl.textContent = formatTime(remainingSeconds);
-// }
-
+// Function to update display with time remaining
 function updateDisplay(seconds) {
 	const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
 	const secs = (seconds % 60).toString().padStart(2, '0');
@@ -41,27 +37,26 @@ function updateDisplay(seconds) {
 	displayEl.textContent = `${mins}:${secs}`;
 }
 
-// UI toggle helper
-const modeButtonsEl = document.getElementById('mode-buttons');
-const controlButtonsEl = document.getElementById('control-buttons');
-const playPauseBtn = document.getElementById('play-pause');
 
+// When triggered, switches display to show control buttons (play/pause, stop, reset)
 function toggleToControls() {
 	modeButtonsEl.style.display = 'none';
 	controlButtonsEl.style.display = 'flex';
 	playPauseBtn.textContent = 'pause'
 }
 
+// When triggered, switches display to show mode buttons (Pomodoro, break, cycle, custom)
 function toggleToModes() {
 	modeButtonsEl.style.display = 'flex';
 	controlButtonsEl.style.display = 'none';
 	playPauseBtn.textContent = 'play'
 }
 
-// Set mode
+// Function to set initial states upon triggering specific modes
 function setMode(modeName, customSeconds = null) {
 	currentMode = modeName;
 
+	// Custom mode calculation duration calculation, reading customSeconds from user input
 	if (modeName == 'custom' && Number.isFinite(customSeconds)) {
 		initialDuration = customSeconds
 		MODES.custom = customSeconds;
@@ -73,63 +68,7 @@ function setMode(modeName, customSeconds = null) {
 	updateDisplay();
 }
 
-// Timer control
-// function startTimer() {
-// 	if (isRunning) return;
-// 	if (remainingSeconds <= 0) remainingSeconds = initialDuration;
-
-// 	isRunning = true;
-
-// 	timerInterval = setInterval(() => {
-// 			remainingSeconds--;
-// 			updateDisplay();
-// 			if (remainingSeconds <= 0) {
-// 				clearInterval(timerInterval);
-// 				isRunning = false;
-// 				let beeps;
-// 				if (currentMode == 'pomodoro' || currentMode == 'custom') {
-// 					beeps = 5;
-// 					freq = 880;
-// 				}
-// 				if (currentMode == 'shortBreak' || currentMode == 'longBreak') {
-// 					beeps = 3;
-// 					freq = 440;
-// 				}
-// 				playAlarm(beeps, freq);
-// 				toggleToModes;
-// 			}
-// 		}, 1000);
-// 		toggleToControls();
-// }
-
-function startTimer(seconds) {
-	clearInterval(timerInterval);
-	duration = seconds;
-	startTime = Date.now();
-	pausedTime = 0;
-	isRunning = true;
-	toggleToControls();
-	updateDisplay(duration)
-
-	// if (timerInterval) clearInterval(timerInterval);
-	// timerInterval = setInterval(updateTimer, 200); // 200ms for smooth updates
-	// toggleToControls();
-
-	timerInterval = setInterval(() => {
-		const elapsed = Math.floor((Date.now() - startTime) / 1000);
-		const remaining = duration - elapsed;
-		updateDisplay(Math.max(remaining, 0));
-
-		if (remaining <= 0) {
-			clearInterval(timerInterval);
-			isRunning = false;
-			playModeAlarm();
-			toggleToModes();
-		}
-	}, 1000)
-}
-
-
+// Function to handle timer update behavior
 function updateTimer() {
 	const now = Date.now();
 	const elapsed = Math.floor((now - startTime) / 1000);
@@ -149,18 +88,27 @@ function updateTimer() {
 			freq = 440;
 		}
 		playModeAlarm();
+		toggleToModes();
 		// switch to next mode here?
 	}
 
 }
 
+// Function to begin timer based on mode inputs
+function startTimer(seconds) {
+	clearInterval(timerInterval);
+	duration = seconds; // seconds input read from currentModeSeconds variable, adjusted in setMode()
+	startTime = Date.now();
+	pausedTime = 0;
+	isRunning = true;
+	toggleToControls(); // ensures timer controls are displayed 
+	updateDisplay(duration)
+	updateTimer();
+	timerInterval = setInterval(updateTimer, 1000)
+}
 
-// function pauseTimer() {
-// 	if (!isRunning) return;
-// 	clearInterval(timerInterval);
-// 	isRunning = false;
-// 	playPauseBtn.textContent = 'play';
-// }
+
+
 
 function pauseTimer() {
     clearInterval(timerInterval);
@@ -176,17 +124,8 @@ function resumeTimer() {
     duration = pausedTime;
     isRunning = true;
     updateDisplay(duration);
-    timerInterval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        const remaining = duration - elapsed;
-        updateDisplay(Math.max(remaining, 0));
-        if (remaining <= 0) {
-            clearInterval(timerInterval);
-            isRunning = false;
-            playModeAlarm();
-            toggleToModes();
-        }
-    }, 1000);
+	updateTimer();
+    timerInterval = setInterval(updateTimer, 1000);
     playPauseBtn.textContent = 'pause';
 }
 
