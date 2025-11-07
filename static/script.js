@@ -131,11 +131,10 @@ function resumeTimer() {
 
 function resetTimer() {
 	clearInterval(timerInterval);
-	remainingSeconds = initialDuration;
-	updateDisplay(remainingSeconds)
-	isRunning = false;
-	pausedTime = 0;
-	// if timer is paused, it will stay paused
+	startTimer(currentModeSeconds);
+	// remainingSeconds = initialDuration;
+	// updateDisplay(remainingSeconds)
+	// isRunning = true;
 }
 
 function stopTimer() {
